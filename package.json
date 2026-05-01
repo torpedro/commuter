@@ -7,11 +7,12 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace @commute/web",
-    "build:web": "npm run build --workspace @commute/web",
-    "build:cli": "npm run build --workspace @commute/cli",
-    "build": "npm run build:web && npm run build:cli",
-    "preview": "npm run preview --workspace @commute/web",
-    "cli": "node ./packages/cli/dist/cli/src/index.js"
+    "build:shared": "npm run build --workspace @commute/shared",
+    "dev": "npm run build:shared && npm run dev --workspace @commute/web",
+    "build:web": "npm run build:shared && npm run build --workspace @commute/web",
+    "build:cli": "npm run build:shared && npm run build --workspace @commute/cli",
+    "build": "npm run build:shared && npm run build --workspace @commute/web && npm run build --workspace @commute/cli",
+    "preview": "npm run build:shared && npm run preview --workspace @commute/web",
+    "cli": "node ./packages/cli/dist/index.js"
   }
 }

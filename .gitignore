@@ -2,5 +2,7 @@
 apikeys/*
 !apikeys/README.md
 node_modules/
+packages/cli/dist/
+packages/shared/dist/
 packages/web/node_modules/
 packages/web/dist/

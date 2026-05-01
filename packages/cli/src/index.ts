@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { buildPreviewUrl, explorerInputValues } from "../../shared/src/explorer/types.js";
-import { createTflClient } from "../../shared/src/tfl/client.js";
+import { buildPreviewUrl, explorerInputValues } from "@commute/shared/explorer/types";
+import { createTflClient } from "@commute/shared/tfl/client";
 import {
   EXPLORER_ENDPOINT_GROUPS,
   EXPLORER_ENDPOINTS,
   TFL_API_BASE,
-} from "../../shared/src/tfl/explorer.js";
+} from "@commute/shared/tfl/explorer";
 
 type Command = "list" | "run";
 

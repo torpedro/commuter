@@ -49,11 +49,6 @@ export default defineConfig({
     "import.meta.env.VITE_TFL_API_KEY": JSON.stringify(readApiKey()),
   },
   plugins: [react()],
-  resolve: {
-    alias: {
-      "@commute/shared": path.resolve(__dirname, "../shared/src"),
-    },
-  },
   server: {
     port: 5173,
     proxy: {

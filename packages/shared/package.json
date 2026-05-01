@@ -2,5 +2,40 @@
   "name": "@commute/shared",
   "version": "0.1.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "exports": {
+    "./explorer/provider": {
+      "types": "./dist/explorer/provider.d.ts",
+      "import": "./dist/explorer/provider.js"
+    },
+    "./explorer/types": {
+      "types": "./dist/explorer/types.d.ts",
+      "import": "./dist/explorer/types.js"
+    },
+    "./providers": {
+      "types": "./dist/providers.d.ts",
+      "import": "./dist/providers.js"
+    },
+    "./tfl/client": {
+      "types": "./dist/tfl/client.d.ts",
+      "import": "./dist/tfl/client.js"
+    },
+    "./tfl/explorer": {
+      "types": "./dist/tfl/explorer.d.ts",
+      "import": "./dist/tfl/explorer.js"
+    },
+    "./tfl/reference": {
+      "types": "./dist/tfl/reference.d.ts",
+      "import": "./dist/tfl/reference.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
 }
