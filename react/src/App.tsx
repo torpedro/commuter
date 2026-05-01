@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getJson } from "./tfl/client";
+import { activeApiKey, getJson, readStoredApiKey, writeStoredApiKey } from "./tfl/client";
 import {
   collectBusStops,
   fetchDepartures,
@@ -294,6 +294,10 @@ function SearchPage() {
     <>
       <HeaderBar currentPage="search" />
       <main className="app-shell">
+        <section className="page-intro">
+          <p className="page-kicker">Commute</p>
+          <h1>Search</h1>
+        </section>
         <section className="controls" aria-label="Departure controls">
           <div className="control-grid">
             <label>
@@ -468,6 +472,10 @@ function IndexPage() {
         }
       />
       <main className="app-shell static-page">
+        <section className="page-intro">
+          <p className="page-kicker">Commute</p>
+          <h1>Saved searches</h1>
+        </section>
         {savedSearches.map((search) => {
           const loadState = loadStates[search.id] ?? emptyLoadState;
           const visibleDepartures = filterDeparturesByLines(
@@ -565,7 +573,12 @@ const EXPLORER_ENDPOINT_GROUPS: ExplorerEndpointGroup[] = [
         buildPath: (v) => ({
           path: `/StopPoint/Search/${encodeURIComponent(v.query ?? "")}`,
           params: {
-            modes: (v.modes ?? "bus").split(",").map((m) => m.trim()).filter(Boolean),
+            modes:
+              (v.modes ?? "bus")
+                .split(",")
+                .map((m) => m.trim())
+                .filter(Boolean)
+                .join(",") || undefined,
             maxResults: Number(v.maxResults ?? 20),
             includeHubs: true,
           },
@@ -1361,7 +1374,138 @@ function EntityTable({
   );
 }
 
-function EntityPanel({ entity }: { entity: DataEntityDef }) {
+type ExplorerCellState = {
+  paramValues: Record<string, string>;
+  loading: boolean;
+  result: unknown;
+  error: string | null;
+  meta: { ms: number; summary: string; bytes: number } | null;
+};
+
+type ExplorerNotebookSection = {
+  id: string;
+  label: string;
+  description: string;
+  endpointIds: string[];
+};
+
+const EXPLORER_ENDPOINT_BY_ID = Object.fromEntries(
+  EXPLORER_ENDPOINTS.map((endpoint) => [endpoint.id, endpoint]),
+) as Record<string, ExplorerEndpointDef>;
+
+const EXPLORER_NOTEBOOK_SECTIONS: ExplorerNotebookSection[] = [
+  {
+    id: "stop-workbench",
+    label: "Stop Workbench",
+    description: "Search stops, then inspect details, nearby points, routes, and arrivals.",
+    endpointIds: [
+      "stoppoint-search",
+      "stoppoint-details",
+      "stoppoint-arrivals",
+      "stoppoint-nearby",
+      "stoppoint-route",
+      "stoppoint-disruption",
+    ],
+  },
+  {
+    id: "line-workbench",
+    label: "Line Workbench",
+    description: "Search lines, then inspect status, routes, stops, and disruptions.",
+    endpointIds: [
+      "line-search",
+      "line-by-id",
+      "line-status",
+      "line-route-sequence",
+      "line-stop-points",
+      "line-arrivals-at-stop",
+      "line-disruption",
+    ],
+  },
+  {
+    id: "journey-and-places",
+    label: "Journey And Places",
+    description: "Plan journeys and look up related places in one flow.",
+    endpointIds: [
+      "journey-results",
+      "place-search",
+      "place-nearby",
+      "place-by-id",
+      "search",
+    ],
+  },
+  {
+    id: "city-systems",
+    label: "City Systems",
+    description: "Explore bikes, roads, vehicles, occupancy, and city datasets.",
+    endpointIds: [
+      "bikepoint-search",
+      "bikepoint-by-id",
+      "bikepoint-all",
+      "vehicle-arrivals",
+      "road-status",
+      "road-disruption",
+      "occupancy-bike-points",
+      "airquality",
+      "accidentstats",
+    ],
+  },
+  {
+    id: "metadata",
+    label: "Metadata Shelf",
+    description: "Reference modes, severities, categories, and other metadata.",
+    endpointIds: [
+      "stoppoint-meta-modes",
+      "stoppoint-meta-stoptypes",
+      "line-meta-modes",
+      "line-meta-severity",
+      "line-meta-disruption-categories",
+      "journey-meta-modes",
+      "mode-active-service-types",
+      "road-meta-severities",
+      "road-meta-categories",
+      "place-meta-types",
+    ],
+  },
+];
+
+function explorerInputValues(
+  endpoint: ExplorerEndpointDef,
+  paramValues: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    endpoint.params.map((param) => [param.key, paramValues[param.key] ?? param.defaultValue]),
+  );
+}
+
+function initialExplorerCellState(): ExplorerCellState {
+  return {
+    paramValues: {},
+    loading: false,
+    result: undefined,
+    error: null,
+    meta: null,
+  };
+}
+
+function stopPointBestId(match: {
+  naptanId?: string;
+  id: string;
+}): string {
+  return match.naptanId ?? match.id;
+}
+
+function copyToClipboard(value: string) {
+  void navigator.clipboard.writeText(value);
+}
+
+function scrollToExplorerCell(endpointId: string) {
+  document.getElementById(`cell-${endpointId}`)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+}
+
+function ReferenceCard({ entity }: { entity: DataEntityDef }) {
   const [filter, setFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<DataEntityRow[] | null>(null);
@@ -1394,16 +1538,16 @@ function EntityPanel({ entity }: { entity: DataEntityDef }) {
   }
 
   function copy(id: string) {
-    void navigator.clipboard.writeText(id);
+    copyToClipboard(id);
     setCopied(id);
     setTimeout(() => setCopied(null), 1500);
   }
 
   return (
-    <>
-      <div className="explorer-main-header">
-        <h1 className="explorer-endpoint-title">{entity.label}</h1>
-        <p className="explorer-endpoint-desc">{entity.description}</p>
+    <section className="reference-card">
+      <div className="reference-card-header">
+        <h3 className="reference-card-title">{entity.label}</h3>
+        <p className="reference-card-desc">{entity.description}</p>
       </div>
 
       {isDynamic ? (
@@ -1457,170 +1601,603 @@ function EntityPanel({ entity }: { entity: DataEntityDef }) {
       ) : (
         <EntityTable rows={staticRows} copied={copied} onCopy={copy} />
       )}
-    </>
+    </section>
+  );
+}
+
+function NotebookStopSearchResults({
+  result,
+  onUseValues,
+}: {
+  result: unknown;
+  onUseValues: (
+    endpointId: string,
+    values: Record<string, string>,
+    options?: { execute?: boolean },
+  ) => void;
+}) {
+  if (
+    !result ||
+    typeof result !== "object" ||
+    !("matches" in result) ||
+    !Array.isArray((result as { matches?: unknown }).matches)
+  ) {
+    return null;
+  }
+
+  const matches = (result as {
+    matches: Array<{
+      id: string;
+      naptanId?: string;
+      commonName?: string;
+      stopLetter?: string;
+      lat?: number;
+      lon?: number;
+    }>;
+  }).matches;
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="linked-result-panel">
+      <div className="linked-result-header">
+        <strong>Follow-on actions</strong>
+        <span>{matches.length} search matches ready to feed into other cells</span>
+      </div>
+      <div className="linked-result-table-wrap">
+        <table className="linked-result-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>ID</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matches.slice(0, 12).map((match) => {
+              const stopId = stopPointBestId(match);
+              const displayName = match.stopLetter
+                ? `${match.commonName ?? match.id} (Stop ${match.stopLetter})`
+                : match.commonName ?? match.id;
+              return (
+                <tr key={`${match.id}-${stopId}`}>
+                  <td>{displayName}</td>
+                  <td>
+                    <code className="entity-id-code">{stopId}</code>
+                  </td>
+                  <td className="linked-result-actions">
+                    <button
+                      className="entity-copy-btn"
+                      type="button"
+                      onClick={() =>
+                        onUseValues(
+                          "stoppoint-arrivals",
+                          { stopPointId: stopId },
+                          { execute: true },
+                        )
+                      }
+                    >
+                      Arrivals
+                    </button>
+                    <button
+                      className="entity-copy-btn"
+                      type="button"
+                      onClick={() =>
+                        onUseValues("stoppoint-details", { ids: stopId }, { execute: true })
+                      }
+                    >
+                      Details
+                    </button>
+                    {typeof match.lat === "number" && typeof match.lon === "number" ? (
+                      <button
+                        className="entity-copy-btn"
+                        type="button"
+                        onClick={() =>
+                          onUseValues(
+                            "stoppoint-nearby",
+                            {
+                              lat: String(match.lat),
+                              lon: String(match.lon),
+                            },
+                            { execute: true },
+                          )
+                        }
+                      >
+                        Nearby
+                      </button>
+                    ) : null}
+                    <button
+                      className="entity-copy-btn"
+                      type="button"
+                      onClick={() => copyToClipboard(stopId)}
+                    >
+                      Copy ID
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function NotebookLineSearchResults({
+  result,
+  onUseValues,
+}: {
+  result: unknown;
+  onUseValues: (
+    endpointId: string,
+    values: Record<string, string>,
+    options?: { execute?: boolean },
+  ) => void;
+}) {
+  if (
+    !result ||
+    typeof result !== "object" ||
+    !("matches" in result) ||
+    !Array.isArray((result as { matches?: unknown }).matches)
+  ) {
+    return null;
+  }
+
+  const matches = (result as {
+    matches: Array<{ id?: string; name?: string }>;
+  }).matches.filter((match) => typeof match.id === "string");
+
+  if (matches.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="linked-result-panel">
+      <div className="linked-result-header">
+        <strong>Send to line cells</strong>
+        <span>Use line IDs directly in metadata, status, and route lookups</span>
+      </div>
+      <div className="linked-result-table-wrap">
+        <table className="linked-result-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>ID</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matches.slice(0, 12).map((match) => (
+              <tr key={match.id}>
+                <td>{match.name ?? match.id}</td>
+                <td>
+                  <code className="entity-id-code">{match.id}</code>
+                </td>
+                <td className="linked-result-actions">
+                  <button
+                    className="entity-copy-btn"
+                    type="button"
+                    onClick={() =>
+                      onUseValues("line-by-id", { ids: match.id ?? "" }, { execute: true })
+                    }
+                  >
+                    Metadata
+                  </button>
+                  <button
+                    className="entity-copy-btn"
+                    type="button"
+                    onClick={() =>
+                      onUseValues("line-status", { ids: match.id ?? "" }, { execute: true })
+                    }
+                  >
+                    Status
+                  </button>
+                  <button
+                    className="entity-copy-btn"
+                    type="button"
+                    onClick={() =>
+                      onUseValues("line-stop-points", { id: match.id ?? "" }, { execute: true })
+                    }
+                  >
+                    Stops
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function NotebookCell({
+  endpoint,
+  cellNumber,
+  cellState,
+  onSetParam,
+  onExecute,
+  onUseValues,
+}: {
+  endpoint: ExplorerEndpointDef;
+  cellNumber: number;
+  cellState: ExplorerCellState;
+  onSetParam: (endpointId: string, key: string, value: string) => void;
+  onExecute: (endpointId: string) => void;
+  onUseValues: (
+    endpointId: string,
+    values: Record<string, string>,
+    options?: { execute?: boolean },
+  ) => void;
+}) {
+  const currentValues = useMemo(
+    () => explorerInputValues(endpoint, cellState.paramValues),
+    [endpoint, cellState.paramValues],
+  );
+  const previewUrl = useMemo(
+    () => buildPreviewUrl(endpoint, currentValues),
+    [endpoint, currentValues],
+  );
+
+  return (
+    <div className="notebook-cell-stack" id={`cell-${endpoint.id}`}>
+      <section className="notebook-cell">
+        <div className="notebook-prompt">
+          <span>In [{cellNumber}]</span>
+        </div>
+        <div className="notebook-cell-body">
+          <div className="notebook-cell-head">
+            <div>
+              <h3 className="notebook-cell-title">{endpoint.label}</h3>
+              <p className="notebook-cell-desc">{endpoint.description}</p>
+            </div>
+            <button
+              className="explorer-execute"
+              type="button"
+              onClick={() => onExecute(endpoint.id)}
+              disabled={cellState.loading}
+            >
+              {cellState.loading ? "Fetching…" : "Run cell"}
+            </button>
+          </div>
+
+          <div className="explorer-param-grid">
+            {endpoint.params.map((param) => (
+              <label key={param.key}>
+                <span>{param.label}</span>
+                <input
+                  type={param.type === "number" ? "number" : "text"}
+                  placeholder={param.placeholder ?? param.defaultValue}
+                  value={currentValues[param.key]}
+                  onChange={(e) => onSetParam(endpoint.id, param.key, e.target.value)}
+                />
+              </label>
+            ))}
+          </div>
+
+          <div className="explorer-url-bar">
+            <span className="explorer-url-method">GET</span>
+            <code className="explorer-url-text">{previewUrl}</code>
+          </div>
+
+          {cellState.error ? (
+            <section className="errors" aria-label="API error">
+              <strong>Error</strong>
+              <p style={{ margin: "4px 0 0" }}>{cellState.error}</p>
+            </section>
+          ) : null}
+
+          {endpoint.id === "stoppoint-search" ? (
+            <NotebookStopSearchResults result={cellState.result} onUseValues={onUseValues} />
+          ) : null}
+          {endpoint.id === "line-search" ? (
+            <NotebookLineSearchResults result={cellState.result} onUseValues={onUseValues} />
+          ) : null}
+        </div>
+      </section>
+
+      {cellState.result !== undefined ? (
+        <section className="notebook-output">
+          <div className="notebook-prompt notebook-prompt-out">
+            <span>Out[{cellNumber}]</span>
+          </div>
+          <div className="notebook-output-body">
+            {cellState.meta ? (
+              <div className="explorer-result-meta">
+                <span>{cellState.meta.summary}</span>
+                <span>{cellState.meta.ms} ms</span>
+                <span>{(cellState.meta.bytes / 1024).toFixed(1)} KB</span>
+              </div>
+            ) : null}
+            <pre
+              className="explorer-json"
+              // Safe: value is JSON.stringify output, HTML-escaped before regex replacement
+              dangerouslySetInnerHTML={{ __html: highlightJson(cellState.result) }}
+            />
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function SettingsWorkbench() {
+  const [apiKeyInput, setApiKeyInput] = useState(() => readStoredApiKey());
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [hasStoredKey, setHasStoredKey] = useState(() => readStoredApiKey().length > 0);
+
+  const usingRuntimeKey = hasStoredKey;
+  const effectiveKey = activeApiKey();
+
+  function saveApiKey() {
+    writeStoredApiKey(apiKeyInput);
+    const storedValue = readStoredApiKey();
+    setApiKeyInput(storedValue);
+    setHasStoredKey(storedValue.length > 0);
+    setSaveMessage(storedValue ? "Saved browser API key." : "Cleared browser API key.");
+  }
+
+  function clearApiKey() {
+    writeStoredApiKey("");
+    setApiKeyInput("");
+    setHasStoredKey(false);
+    setSaveMessage("Cleared browser API key.");
+  }
+
+  return (
+    <section className="notebook-section">
+      <div className="notebook-section-header">
+        <p className="explorer-kicker">Settings</p>
+        <h2>API Settings</h2>
+        <p>Store a TfL API key in this browser to use it for explorer requests.</p>
+      </div>
+
+      <div className="settings-panel">
+        <label className="settings-field">
+          <span>TfL API key</span>
+          <input
+            type="password"
+            placeholder="Paste TfL app_key"
+            value={apiKeyInput}
+            onChange={(e) => setApiKeyInput(e.target.value)}
+          />
+        </label>
+
+        <div className="settings-actions">
+          <button className="explorer-execute" type="button" onClick={saveApiKey}>
+            Save key
+          </button>
+          <button className="entity-copy-btn" type="button" onClick={clearApiKey}>
+            Clear
+          </button>
+        </div>
+
+        {saveMessage ? <div className="save-message">{saveMessage}</div> : null}
+
+        <div className="settings-meta">
+          <span>{usingRuntimeKey ? "Using browser-stored key" : "Using build-time key"}</span>
+          <span>{effectiveKey ? `Key present (${effectiveKey.length} chars)` : "No API key set"}</span>
+        </div>
+      </div>
+    </section>
   );
 }
 
 function ExplorerPage() {
-  const [selectedId, setSelectedId] = useState<string>(EXPLORER_ENDPOINTS[0].id);
-  const [paramValues, setParamValues] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<unknown>(undefined);
-  const [error, setError] = useState<string | null>(null);
-  const [meta, setMeta] = useState<{ ms: number; summary: string; bytes: number } | null>(null);
-
-  const endpoint = EXPLORER_ENDPOINTS.find((e) => e.id === selectedId);
-  const entity = DATA_ENTITIES.find((e) => e.id === selectedId);
-
-  const currentValues = useMemo(
-    () =>
-      endpoint
-        ? Object.fromEntries(endpoint.params.map((p) => [p.key, paramValues[p.key] ?? p.defaultValue]))
-        : {},
-    [endpoint, paramValues],
+  const [selectedSectionId, setSelectedSectionId] = useState<string>(
+    EXPLORER_NOTEBOOK_SECTIONS[0].id,
   );
-
-  const previewUrl = useMemo(
-    () => (endpoint ? buildPreviewUrl(endpoint, currentValues) : ""),
-    [endpoint, currentValues],
+  const [cellStates, setCellStates] = useState<Record<string, ExplorerCellState>>(() =>
+    Object.fromEntries(
+      EXPLORER_ENDPOINTS.map((endpoint) => [endpoint.id, initialExplorerCellState()]),
+    ) as Record<string, ExplorerCellState>,
   );
+  const selectedSection =
+    EXPLORER_NOTEBOOK_SECTIONS.find((section) => section.id === selectedSectionId) ??
+    EXPLORER_NOTEBOOK_SECTIONS[0];
 
-  function handleSelect(id: string) {
-    setSelectedId(id);
-    setParamValues({});
-    setResult(undefined);
-    setError(null);
-    setMeta(null);
+  function setParam(endpointId: string, key: string, value: string) {
+    setCellStates((current) => ({
+      ...current,
+      [endpointId]: {
+        ...current[endpointId],
+        paramValues: {
+          ...current[endpointId].paramValues,
+          [key]: value,
+        },
+      },
+    }));
   }
 
-  function setParam(key: string, value: string) {
-    setParamValues((current) => ({ ...current, [key]: value }));
+  function getCellValues(endpointId: string, overrideValues?: Record<string, string>) {
+    const endpoint = EXPLORER_ENDPOINT_BY_ID[endpointId];
+    const state = cellStates[endpointId] ?? initialExplorerCellState();
+    return explorerInputValues(endpoint, {
+      ...state.paramValues,
+      ...(overrideValues ?? {}),
+    });
   }
 
-  async function execute() {
-    if (!endpoint) return;
-    setLoading(true);
-    setResult(undefined);
-    setError(null);
-    setMeta(null);
+  async function executeEndpoint(endpointId: string, overrideValues?: Record<string, string>) {
+    const endpoint = EXPLORER_ENDPOINT_BY_ID[endpointId];
+    if (!endpoint) {
+      return;
+    }
+
+    const currentValues = getCellValues(endpointId, overrideValues);
+    setCellStates((current) => ({
+      ...current,
+      [endpointId]: {
+        ...current[endpointId],
+        paramValues: {
+          ...current[endpointId].paramValues,
+          ...(overrideValues ?? {}),
+        },
+        loading: true,
+        result: undefined,
+        error: null,
+        meta: null,
+      },
+    }));
+
     const t0 = Date.now();
     const { path, params } = endpoint.buildPath(currentValues);
     try {
       const data = await getJson<unknown>(path, params);
       const elapsed = Date.now() - t0;
-      setResult(data);
-      setMeta({ ms: elapsed, summary: explorerResultSummary(data), bytes: JSON.stringify(data).length });
+      setCellStates((current) => ({
+        ...current,
+        [endpointId]: {
+          ...current[endpointId],
+          loading: false,
+          result: data,
+          error: null,
+          meta: {
+            ms: elapsed,
+            summary: explorerResultSummary(data),
+            bytes: JSON.stringify(data).length,
+          },
+        },
+      }));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
-      setMeta({ ms: Date.now() - t0, summary: "", bytes: 0 });
-    } finally {
-      setLoading(false);
+      setCellStates((current) => ({
+        ...current,
+        [endpointId]: {
+          ...current[endpointId],
+          loading: false,
+          error: caught instanceof Error ? caught.message : String(caught),
+          meta: {
+            ms: Date.now() - t0,
+            summary: "",
+            bytes: 0,
+          },
+        },
+      }));
+    }
+  }
+
+  function applyCellValues(
+    endpointId: string,
+    values: Record<string, string>,
+    options?: { execute?: boolean },
+  ) {
+    setCellStates((current) => ({
+      ...current,
+      [endpointId]: {
+        ...current[endpointId],
+        paramValues: {
+          ...current[endpointId].paramValues,
+          ...values,
+        },
+      },
+    }));
+    scrollToExplorerCell(endpointId);
+    if (options?.execute) {
+      void executeEndpoint(endpointId, values);
     }
   }
 
   return (
     <>
       <HeaderBar currentPage="explorer" />
-      <div className="explorer-layout">
-        <nav className="explorer-sidebar" aria-label="TfL API explorer">
-          {EXPLORER_ENDPOINT_GROUPS.map((group) => (
-            <div key={group.label} className="explorer-sidebar-group">
-              <p className="explorer-sidebar-heading">{group.label}</p>
-              <ul className="explorer-sidebar-list">
-                {group.endpoints.map((ep) => (
-                  <li key={ep.id}>
-                    <button
-                      type="button"
-                      className={`explorer-sidebar-item${selectedId === ep.id ? " explorer-sidebar-item--active" : ""}`}
-                      onClick={() => handleSelect(ep.id)}
-                    >
-                      {ep.label}
-                    </button>
-                  </li>
+      <main className="explorer-notebook-page">
+        <div className="explorer-workbench-layout">
+          <aside className="explorer-workbench-sidebar" aria-label="Workbench sections">
+            <p className="explorer-sidebar-title">Workbenches</p>
+            <div className="explorer-sidebar-group">
+              <p className="explorer-sidebar-group-label">TfL</p>
+              <div className="explorer-sidebar-list">
+                {EXPLORER_NOTEBOOK_SECTIONS.map((section) => (
+                  <button
+                    key={section.id}
+                    type="button"
+                    className={`explorer-sidebar-item${
+                      selectedSectionId === section.id ? " explorer-sidebar-item--active" : ""
+                    }`}
+                    onClick={() => setSelectedSectionId(section.id)}
+                  >
+                    <strong>{section.label}</strong>
+                    <span>{section.description}</span>
+                  </button>
                 ))}
-              </ul>
+                <button
+                  type="button"
+                  className={`explorer-sidebar-item${
+                    selectedSectionId === "reference-ids" ? " explorer-sidebar-item--active" : ""
+                  }`}
+                  onClick={() => setSelectedSectionId("reference-ids")}
+                >
+                  <strong>Reference IDs</strong>
+                  <span>Common TfL station, line, mode, and bus stop IDs.</span>
+                </button>
+                <button
+                  type="button"
+                  className={`explorer-sidebar-item${
+                    selectedSectionId === "settings" ? " explorer-sidebar-item--active" : ""
+                  }`}
+                  onClick={() => setSelectedSectionId("settings")}
+                >
+                  <strong>Settings</strong>
+                  <span>Set the browser API key used for TfL requests.</span>
+                </button>
+              </div>
             </div>
-          ))}
-          <p className="explorer-sidebar-heading explorer-sidebar-heading--section">Data Entities</p>
-          <ul className="explorer-sidebar-list">
-            {DATA_ENTITIES.map((ent) => (
-              <li key={ent.id}>
-                <button
-                  type="button"
-                  className={`explorer-sidebar-item${selectedId === ent.id ? " explorer-sidebar-item--active" : ""}`}
-                  onClick={() => handleSelect(ent.id)}
-                >
-                  {ent.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
+          </aside>
 
-        <main className="explorer-main">
-          {entity ? (
-            <EntityPanel key={entity.id} entity={entity} />
-          ) : endpoint ? (
-            <>
-              <div className="explorer-main-header">
-                <h1 className="explorer-endpoint-title">{endpoint.label}</h1>
-                <p className="explorer-endpoint-desc">{endpoint.description}</p>
-              </div>
-
-              <div className="explorer-param-grid">
-                {endpoint.params.map((param) => (
-                  <label key={param.key}>
-                    {param.label}
-                    <input
-                      type={param.type === "number" ? "number" : "text"}
-                      placeholder={param.placeholder ?? param.defaultValue}
-                      value={currentValues[param.key]}
-                      onChange={(e) => setParam(param.key, e.target.value)}
-                    />
-                  </label>
-                ))}
-                <button
-                  className="explorer-execute"
-                  type="button"
-                  onClick={() => void execute()}
-                  disabled={loading}
-                >
-                  {loading ? "Fetching…" : "Execute"}
-                </button>
-              </div>
-
-              <div className="explorer-url-bar">
-                <span className="explorer-url-method">GET</span>
-                <code className="explorer-url-text">{previewUrl}</code>
-              </div>
-
-              {error ? (
-                <section className="errors" aria-label="API error">
-                  <strong>Error</strong>
-                  <p style={{ margin: "4px 0 0" }}>{error}</p>
-                </section>
-              ) : null}
-
-              {result !== undefined ? (
-                <section className="explorer-result">
-                  {meta ? (
-                    <div className="explorer-result-meta">
-                      <span>{meta.summary}</span>
-                      <span>{meta.ms} ms</span>
-                      <span>{(meta.bytes / 1024).toFixed(1)} KB</span>
-                    </div>
-                  ) : null}
-                  <pre
-                    className="explorer-json"
-                    // Safe: value is JSON.stringify output, HTML-escaped before regex replacement
-                    dangerouslySetInnerHTML={{ __html: highlightJson(result) }}
-                  />
-                </section>
-              ) : null}
-            </>
-          ) : null}
-        </main>
-      </div>
+          <div className="explorer-notebook">
+            {selectedSectionId === "settings" ? (
+              <SettingsWorkbench />
+            ) : selectedSectionId === "reference-ids" ? (
+              <section id="reference-ids" className="notebook-section">
+                <div className="notebook-section-header">
+                  <p className="explorer-kicker">TfL Reference</p>
+                  <h2>TfL reference IDs</h2>
+                  <p>
+                    Static and searchable ID lists for common TfL stop, line, and mode values.
+                  </p>
+                </div>
+                <div className="reference-grid">
+                  {DATA_ENTITIES.map((entity) => (
+                    <ReferenceCard key={entity.id} entity={entity} />
+                  ))}
+                </div>
+              </section>
+            ) : (
+              <section key={selectedSection.id} id={selectedSection.id} className="notebook-section">
+                <div className="notebook-section-header">
+                  <p className="explorer-kicker">TfL Workbench</p>
+                  <h2>{selectedSection.label}</h2>
+                  <p>{selectedSection.description}</p>
+                </div>
+                <div className="notebook-stack">
+                  {selectedSection.endpointIds.map((endpointId, index) => {
+                    const endpoint = EXPLORER_ENDPOINT_BY_ID[endpointId];
+                    if (!endpoint) {
+                      return null;
+                    }
+                    return (
+                      <NotebookCell
+                        key={endpoint.id}
+                        endpoint={endpoint}
+                        cellNumber={index + 1}
+                        cellState={cellStates[endpoint.id]}
+                        onSetParam={setParam}
+                        onExecute={(id) => {
+                          void executeEndpoint(id);
+                        }}
+                        onUseValues={applyCellValues}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+      </main>
     </>
   );
 }

@@ -1,10 +1,12 @@
 const API_BASE = import.meta.env.VITE_TFL_API_BASE ?? "https://api.tfl.gov.uk";
 const API_KEY = import.meta.env.VITE_TFL_API_KEY ?? "";
+export const TFL_API_KEY_STORAGE_KEY = "commute.tflApiKey";
 
 /**
  * Shared JSON client for TfL Unified API calls.
  *
- * The Vite build injects `VITE_TFL_API_KEY`; the client appends it as
+ * The browser can persist an API key in localStorage; if present it overrides
+ * the build-time `VITE_TFL_API_KEY`. The client appends the active key as
  * `app_key` unless the caller already supplied one. `VITE_TFL_API_BASE` can be
  * set for tests or a proxy, but production defaults to `https://api.tfl.gov.uk`.
  */
@@ -56,6 +58,27 @@ export async function getJson<T>(
   }
 }
 
+export function readStoredApiKey(): string {
+  try {
+    return window.localStorage.getItem(TFL_API_KEY_STORAGE_KEY)?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function writeStoredApiKey(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    window.localStorage.removeItem(TFL_API_KEY_STORAGE_KEY);
+    return;
+  }
+  window.localStorage.setItem(TFL_API_KEY_STORAGE_KEY, trimmed);
+}
+
+export function activeApiKey(): string {
+  return readStoredApiKey() || API_KEY;
+}
+
 function responsePreview(body: string): string {
   return (
     body
@@ -95,8 +118,9 @@ function buildApiUrl(
     }
   }
 
-  if (API_KEY && !url.searchParams.has("app_key")) {
-    url.searchParams.set("app_key", API_KEY);
+  const apiKey = activeApiKey();
+  if (apiKey && !url.searchParams.has("app_key")) {
+    url.searchParams.set("app_key", apiKey);
   }
 
   return url;

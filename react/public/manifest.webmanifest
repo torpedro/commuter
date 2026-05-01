@@ -1,7 +1,7 @@
 {
   "name": "Commute",
   "short_name": "Commute",
-  "description": "Live London Bridge bus departures for your commute.",
+  "description": "Commute workbenches for transport departures and API exploration.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
