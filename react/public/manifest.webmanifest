@@ -2,7 +2,7 @@
   "name": "Commute",
   "short_name": "Commute",
   "description": "Live London Bridge bus departures for your commute.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f6f7f9",

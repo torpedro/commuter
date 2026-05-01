@@ -394,3 +394,338 @@ button:disabled {
     grid-column: auto;
   }
 }
+
+/* ---- API Explorer ---- */
+
+.explorer-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: calc(100vh - 56px);
+}
+
+.explorer-sidebar {
+  position: sticky;
+  top: 56px;
+  align-self: start;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+  padding: 20px 0;
+  border-right: 1px solid #d9dee6;
+  background: #fff;
+}
+
+.explorer-sidebar-group + .explorer-sidebar-group {
+  margin-top: 4px;
+}
+
+.explorer-sidebar-heading {
+  margin: 0 0 2px;
+  padding: 8px 16px 4px;
+  color: #8896a7;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.explorer-sidebar-heading--section {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #d9dee6;
+}
+
+.explorer-sidebar-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.explorer-sidebar-item {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 0;
+  color: #3f4a5a;
+  background: transparent;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.explorer-sidebar-item:hover {
+  background: #f0f3f7;
+  color: #17202a;
+}
+
+.explorer-sidebar-item--active {
+  background: #e8f0fb;
+  color: #0078d4;
+  font-weight: 800;
+}
+
+.explorer-sidebar-item--active:hover {
+  background: #dce8f8;
+}
+
+.explorer-main {
+  padding: 28px 32px 48px;
+  max-width: 900px;
+}
+
+.explorer-main-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #d9dee6;
+}
+
+.explorer-endpoint-title {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.explorer-endpoint-desc {
+  margin: 0;
+  color: #566274;
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.82rem;
+}
+
+.explorer-param-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.explorer-param-grid label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  color: #4b5565;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.explorer-execute {
+  min-height: 42px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  background: #0078d4;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.explorer-execute:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.explorer-url-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #d9dee6;
+  border-radius: 6px;
+  background: #f6f7f9;
+  overflow-x: auto;
+}
+
+.explorer-url-method {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #0078d4;
+  color: #fff;
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.explorer-url-text {
+  color: #17202a;
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.explorer-result {
+  margin-top: 20px;
+}
+
+.explorer-result-meta {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  color: #566274;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.explorer-result-meta span {
+  padding: 5px 9px;
+  border: 1px solid #d9dee6;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.explorer-json {
+  overflow: auto;
+  max-height: 600px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #d9dee6;
+  border-radius: 8px;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+.json-key    { color: #89b4fa; }
+.json-string { color: #a6e3a1; }
+.json-number { color: #fab387; }
+.json-bool   { color: #cba6f7; }
+.json-null   { color: #6c7086; }
+
+/* ---- Entity tables ---- */
+
+.entity-filter-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.entity-filter-input {
+  width: 220px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid #c8d0db;
+  border-radius: 6px;
+  color: #17202a;
+  background: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.entity-count {
+  color: #566274;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.entity-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #d9dee6;
+  border-radius: 8px;
+}
+
+.entity-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.entity-table th {
+  padding: 8px 12px;
+  background: #eef2f6;
+  color: #4b5565;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #d9dee6;
+}
+
+.entity-table td {
+  padding: 9px 12px;
+  border-top: 1px solid #edf0f4;
+  vertical-align: middle;
+}
+
+.entity-table tbody tr:first-child td {
+  border-top: 0;
+}
+
+.entity-table tbody tr:hover td {
+  background: #f6f8fb;
+}
+
+.entity-id-code {
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.82rem;
+  color: #17202a;
+}
+
+.entity-copy-btn {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid #c8d0db;
+  border-radius: 5px;
+  background: #fff;
+  color: #3f4a5a;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.entity-copy-btn:hover {
+  background: #f0f3f7;
+  border-color: #a8b4c2;
+}
+
+@media (max-width: 640px) {
+  .explorer-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .explorer-sidebar {
+    position: static;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid #d9dee6;
+    padding: 12px 0;
+  }
+
+  .explorer-sidebar-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 12px;
+  }
+
+  .explorer-sidebar-item {
+    width: auto;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid #c8d0db;
+    border-radius: 999px;
+    font-size: 0.82rem;
+  }
+
+  .explorer-sidebar-item--active {
+    border-color: #0078d4;
+  }
+
+  .explorer-main {
+    padding: 20px 16px 40px;
+  }
+}

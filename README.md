@@ -2,10 +2,7 @@
 
 Commute is a small TfL departures app for saved London transport searches.
 
-The active app is the React/Vite PWA in `react/`. The older Python CLI lives in
-`python/`, but current development is focused on the React app.
-
-## React app
+## App
 
 ```bash
 cd react
@@ -16,13 +13,14 @@ npm run build
 
 The production build is emitted to `react/dist/`.
 
-Pages:
+Pages (hash-routed from a single `index.html`):
 
-- `index.html`: home view showing saved searches.
-- `search.html`: search/configuration view.
+- `#` — home view showing saved searches.
+- `#search` — search/configuration view.
+- `#explorer` — raw TfL API explorer.
 
 The app uses the TfL Unified API directly from the browser. Vite injects the API
-key from `python/apikey` at build time, or from `TFL_API_KEY` if set.
+key from `apikeys/tfl` at build time, or from `TFL_API_KEY` if set.
 
 ## Features
 
@@ -38,4 +36,3 @@ key from `python/apikey` at build time, or from `TFL_API_KEY` if set.
 
 The service worker avoids caching TfL API responses and HTML pages, so live data
 and page content should not become stale through the PWA cache.
-

@@ -1,2 +1,0 @@
-"""TfL endpoint modules."""
-

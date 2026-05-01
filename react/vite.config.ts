@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type ProxyOptions } from "vite";
 
-const keyFile = path.resolve(__dirname, "../python/apikey");
+const keyFile = path.resolve(__dirname, "../apikeys/tfl");
 
 function readApiKey(): string {
   const envKey = process.env.TFL_API_KEY?.trim();
@@ -49,14 +49,6 @@ export default defineConfig({
     "import.meta.env.VITE_TFL_API_KEY": JSON.stringify(readApiKey()),
   },
   plugins: [react()],
-  build: {
-    rollupOptions: {
-      input: {
-        index: path.resolve(__dirname, "index.html"),
-        search: path.resolve(__dirname, "search.html"),
-      },
-    },
-  },
   server: {
     port: 5173,
     proxy: {
