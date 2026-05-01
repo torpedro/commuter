@@ -1,5 +1,6 @@
 *.py[cod]
 apikeys/*
 !apikeys/README.md
-react/node_modules/
-react/dist/
+node_modules/
+packages/web/node_modules/
+packages/web/dist/

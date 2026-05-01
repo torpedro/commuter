@@ -1,0 +1,17 @@
+{
+  "name": "commute",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @commute/web",
+    "build:web": "npm run build --workspace @commute/web",
+    "build:cli": "npm run build --workspace @commute/cli",
+    "build": "npm run build:web && npm run build:cli",
+    "preview": "npm run preview --workspace @commute/web",
+    "cli": "node ./packages/cli/dist/cli/src/index.js"
+  }
+}

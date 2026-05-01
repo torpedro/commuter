@@ -5,13 +5,12 @@ Commute is a small TfL departures app for saved London transport searches.
 ## App
 
 ```bash
-cd react
 npm install
 npm run dev
 npm run build
 ```
 
-The production build is emitted to `react/dist/`.
+The production build is emitted to `packages/web/dist/`.
 
 Pages (hash-routed from a single `index.html`):
 
