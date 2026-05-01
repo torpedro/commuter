@@ -16,6 +16,14 @@
       "types": "./dist/providers.d.ts",
       "import": "./dist/providers.js"
     },
+    "./nationalRail/client": {
+      "types": "./dist/nationalRail/client.d.ts",
+      "import": "./dist/nationalRail/client.js"
+    },
+    "./nationalRail/rpc": {
+      "types": "./dist/nationalRail/rpc.d.ts",
+      "import": "./dist/nationalRail/rpc.js"
+    },
     "./tfl/client": {
       "types": "./dist/tfl/client.d.ts",
       "import": "./dist/tfl/client.js"
@@ -34,6 +42,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.3.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

@@ -35,3 +35,16 @@ key from `apikeys/tfl` at build time, or from `TFL_API_KEY` if set.
 
 The service worker avoids caching TfL API responses and HTML pages, so live data
 and page content should not become stale through the PWA cache.
+
+## CLI
+
+The shared workspace also exposes a local CLI for provider testing:
+
+```bash
+npm run cli -- tfl list
+npm run cli -- national-rail list
+npm run cli -- national-rail run departure-board crs=KGX numRows=6
+```
+
+National Rail CLI calls use OpenLDBWS and read a token from `apikeys/nre`,
+`apikeys/national-rail`, or `NATIONAL_RAIL_TOKEN`.
